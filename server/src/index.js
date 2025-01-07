@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser")
 const morgan = require("morgan")
 const helmet = require("helmet")
 const connexion = require("./config/connectDB")
+const userRouter = require("./routes/user.route")
 
 dotenv.config()
 
@@ -19,11 +20,14 @@ app.use(morgan())
 app.use(helmet({
     crossOriginResourcePolicy : false
 }))
+app.use("/api/user", userRouter)
 
 const PORT = 8080 || process.env.PORT
 
 app.get("/", (req, res) => {
-    res.json({})
+    res.json({
+        message: "create"
+    })
 })
 
 connexion().then(() =>{

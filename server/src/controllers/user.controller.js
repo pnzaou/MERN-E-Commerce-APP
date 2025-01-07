@@ -14,7 +14,9 @@ const registerUser = async (req, res) => {
             })
         }
 
-        const user = await User.find({email})
+        const user = await User.findOne({ email })
+
+        console.log(user)
 
         if(user) {
             return res.status(400).json({
@@ -33,7 +35,7 @@ const registerUser = async (req, res) => {
             password: hashedPassword
         })
 
-        const verifyEmailUrl = ""
+        const verifyEmailUrl = `${process.env.FRONTEND_URL}/verify-email?code=${newUser._id}`
 
         const verifyEmail = await sendEmail({
             sendTo : email,
@@ -44,7 +46,12 @@ const registerUser = async (req, res) => {
             })
         })
 
-        return res.status(201)
+        return res.status(201).json({
+            message: "Inscription réussie",
+            error: false,
+            success: true,
+            data: newUser
+        })
         
     } catch (error) {
         console.log("Erreur dans user.controller (registerUser)")
@@ -54,4 +61,8 @@ const registerUser = async (req, res) => {
             success: false
         })
     }
+}
+
+module.exports = {
+    registerUser
 }
