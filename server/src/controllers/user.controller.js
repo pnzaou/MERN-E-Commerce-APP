@@ -54,7 +54,91 @@ const registerUser = async (req, res) => {
         })
         
     } catch (error) {
-        console.log("Erreur dans user.controller (registerUser)")
+        console.log("Erreur dans user.controller (registerUser):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+const verifyEmail = async (req, res) => {
+    const { code } = req.body
+    try {
+        const user = await User.findById(code)
+
+        if(!user) {
+            return res.status(400).json({
+                message: "Code invalid",
+                error: true,
+                success: false
+            })
+        }
+
+        if(user.verify_email) {
+            return res.status(400).json({
+                message: "Votre email à déjà été vérifié.",
+                error: true,
+                success: false
+            })
+        }
+ 
+        const updated = await User.updateOne({_id: code, verify_email: false}, {
+            $set: {verify_email: true}
+        })
+
+        return res.status(200).json({
+            message: "Votre email a été vérifié avec succès.",
+            error: false,
+            success: true
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (verifyEmail):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+const login = async (req, res) => {
+    const { email, password } = req.body
+    try {
+        const user = await User.findOne({ email })
+
+        if(!email) {
+            return res.status(401).json({
+                message: "Email ou mot de passe incorrect.",
+                error: true,
+                success: false
+            })
+        }
+
+        if(user.status === "Suspendu") {
+            return res.status(403).json({
+                message: "Compte suspendu! Veuillez Contacter l'admin.",
+                error: true,
+                success: false
+            })
+        }
+
+        const checkPassword = await bcrypt.compare(password, user.password)
+        if(!checkPassword) {
+            return res.status(401).json({
+                message: "Email ou mot de passe incorrect.",
+                error: true,
+                success: false
+            })
+        }
+
+        
+
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (login):", error)
         return res.status(500).json({
             message: error.message || error,
             error: true,
@@ -64,5 +148,6 @@ const registerUser = async (req, res) => {
 }
 
 module.exports = {
-    registerUser
+    registerUser,
+    verifyEmail
 }
