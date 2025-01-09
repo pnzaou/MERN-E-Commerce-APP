@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken")
 
 const auth = (req, res, next) => {
     try {
-        const token = req.cookies.accessToken
+        const token = req.cookies.accessToken || req.headers.authorization?.split(" ")[1]
 
         if(!token) {
             return res.status(401).json({
@@ -24,7 +24,7 @@ const auth = (req, res, next) => {
         req.userId = decode.id 
         
         next()
-
+        
     } catch (error) {
         console.log("Erreur dans auth.middleware :", error)
         return res.status(500).json({

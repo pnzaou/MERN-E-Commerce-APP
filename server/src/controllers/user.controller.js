@@ -4,6 +4,7 @@ const bcrypt = require("bcryptjs")
 const verifyEmailTemplate = require("../utils/verifyEmailTemplate")
 const generateAccessToken = require("../utils/generateAccessToken")
 const generateRefreshToken = require("../utils/generateRefreshToken")
+const uploadImagesCloudinary = require("../utils/uploadImagesCloudinary")
 
 const registerUser = async (req, res) => {
     const {name, email, password} = req.body
@@ -209,9 +210,35 @@ const logout = async (req, res) => {
     }
 }
 
+const uploadAvatar = async (req, res) => {
+    const userId = req.userId
+    const image = req.file
+    try {
+        const upload = await uploadImagesCloudinary(image)
+
+        const updatedUser = await User.findByIdAndUpdate(userId, {
+            $set: { avatar: upload.url }
+        })
+
+        return res.status(200).json({
+            message: "photo de profil modifiée avec succès.",
+            data: upload.url
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (uploadAvatar):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 module.exports = {
     registerUser,
     verifyEmail,
     login,
-    logout
+    logout,
+    uploadAvatar
 }
