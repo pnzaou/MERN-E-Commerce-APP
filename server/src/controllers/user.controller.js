@@ -235,10 +235,50 @@ const uploadAvatar = async (req, res) => {
     }
 }
 
+const updateUserDetails = async (req, res) => {
+    const userId = req.userId
+    const {name, email, mobile, password} = req.body 
+    try {
+
+        let hashedPassword = ""
+
+        if(password) {
+            const salt = await bcrypt.genSalt(10)
+            hashedPassword = await bcrypt.hash(password, salt)
+        }
+        
+        const updatedUser = await User.findByIdAndUpdate(userId, {
+            ...(name && {name: name}),
+            ...(email && {email: email}),
+            ...(mobile && {mobile: mobile}),
+            ...(mobile && {mobile: mobile}),
+            ...(password && {password: hashedPassword}),
+        },{
+            new: true
+        })
+
+        return res.status(200).json({
+            message: "Modification réussie.",
+            error: false,
+            success: true,
+            data: updatedUser
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (updateUserDetails):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 module.exports = {
     registerUser,
     verifyEmail,
     login,
     logout,
-    uploadAvatar
+    uploadAvatar,
+    updateUserDetails
 }
