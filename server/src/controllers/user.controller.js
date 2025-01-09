@@ -2,6 +2,8 @@ const sendEmail = require("../config/sendEmail")
 const User = require("../models/user.model")
 const bcrypt = require("bcryptjs")
 const verifyEmailTemplate = require("../utils/verifyEmailTemplate")
+const generateAccessToken = require("../utils/generateAccessToken")
+const generateRefreshToken = require("../utils/generateRefreshToken")
 
 const registerUser = async (req, res) => {
     const {name, email, password} = req.body
@@ -107,9 +109,18 @@ const verifyEmail = async (req, res) => {
 const login = async (req, res) => {
     const { email, password } = req.body
     try {
+
+        if(!email || !password) {
+            return res.status(400).json({
+                message: "Tous les chamos sont obligatoires.",
+                error: true,
+                success: false
+            })
+        }
+
         const user = await User.findOne({ email })
 
-        if(!email) {
+        if(!user) {
             return res.status(401).json({
                 message: "Email ou mot de passe incorrect.",
                 error: true,
@@ -134,9 +145,27 @@ const login = async (req, res) => {
             })
         }
 
-        
+        const accessToken = generateAccessToken(user._id)
+        const refreshToken = await generateRefreshToken(user._id)
 
+        const cookieOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None"
+        }
 
+        res.cookie('accessToken', accessToken, cookieOptions)
+        res.cookie('refreshToken', refreshToken, cookieOptions)
+
+        return res.status(200).json({
+            message: "Connexion réussie",
+            erreor: false,
+            success: true,
+            data: {
+                accessToken,
+                refreshToken
+            }
+        })
     } catch (error) {
         console.log("Erreur dans user.controller (login):", error)
         return res.status(500).json({
@@ -147,7 +176,42 @@ const login = async (req, res) => {
     }
 }
 
+const logout = async (req, res) => {
+    const userId = req.userId
+    try {
+
+        const cookieOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None"
+        }
+
+        res.clearCookie("accessToken", cookieOptions)
+        res.clearCookie("refreshToken", cookieOptions)
+
+        const removeRefreshToken = await User.findByIdAndUpdate(userId, {
+            $set: { refresh_token: "" }
+        })
+
+        return res.status(200).json({
+            message: "Déconnexion réussie",
+            erreor: false,
+            success: true
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (logout):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 module.exports = {
     registerUser,
-    verifyEmail
+    verifyEmail,
+    login,
+    logout
 }
