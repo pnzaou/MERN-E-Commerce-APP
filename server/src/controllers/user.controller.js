@@ -1,12 +1,14 @@
 const sendEmail = require("../config/sendEmail")
 const User = require("../models/user.model")
 const bcrypt = require("bcryptjs")
+const jwt = require("jsonwebtoken")
 const verifyEmailTemplate = require("../utils/verifyEmailTemplate")
 const generateAccessToken = require("../utils/generateAccessToken")
 const generateRefreshToken = require("../utils/generateRefreshToken")
 const uploadImagesCloudinary = require("../utils/uploadImagesCloudinary")
 const generateOtp = require("../utils/generateOtp")
 const forgotPasswordEmailTemplate = require("../utils/forgotPasswordEmailTemplate")
+const generatedAccessToken = require("../utils/generateAccessToken")
 
 const registerUser = async (req, res) => {
     const {name, email, password} = req.body
@@ -434,6 +436,57 @@ const resetPassword = async (req, res) => {
     }
 }
 
+const refreshToken = async (req, res) => {
+    const refreshToken = req.cookies.refreshToken || req.headers?.authorization?.slipt(" ")[1]
+    try {
+
+        if(!refreshToken) {
+            return res.status(401).json({
+                message: "Accès non autorisé",
+                error: true,
+                success: false
+            })
+        }
+
+        const verifyToken = jwt.verify(refreshToken, process.env.SECRET_KEY_REFRESH_TOKEN)
+
+        if(!verifyToken) {
+            return res.status(401).json({
+                message: "Token invalid.",
+                error: true,
+                success: false
+            })
+        }
+        
+        const userId = verifyToken.id
+        const newAccessToken = generatedAccessToken(userId)
+
+        const cookieOptions = {
+            httpOnly: true,
+            secure: true,
+            sameSite: "None"
+        }
+        res.cookie('accessToken', newAccessToken, cookieOptions)
+
+        return res.status(200).json({
+            message: "Nouveau accessToken généré.",
+            error: false,
+            success: true,
+            data: {
+                accessToken: newAccessToken
+            }
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (refreshToken):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 module.exports = {
     registerUser,
     verifyEmail,
@@ -443,5 +496,6 @@ module.exports = {
     updateUserDetails,
     forgotPassword,
     verifyForgotPasswordOtp,
-    resetPassword
+    resetPassword,
+    refreshToken
 }
