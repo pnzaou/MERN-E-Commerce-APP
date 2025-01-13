@@ -5,6 +5,8 @@ const verifyEmailTemplate = require("../utils/verifyEmailTemplate")
 const generateAccessToken = require("../utils/generateAccessToken")
 const generateRefreshToken = require("../utils/generateRefreshToken")
 const uploadImagesCloudinary = require("../utils/uploadImagesCloudinary")
+const generateOtp = require("../utils/generateOtp")
+const forgotPasswordEmailTemplate = require("../utils/forgotPasswordEmailTemplate")
 
 const registerUser = async (req, res) => {
     const {name, email, password} = req.body
@@ -274,11 +276,172 @@ const updateUserDetails = async (req, res) => {
     }
 }
 
+const forgotPassword = async (req, res) => {
+    const { email } = req.body
+    try {
+
+        const user = await User.findOne({ email })
+
+        if(!user) {
+            return res.status(400).json({
+                message: "Aucun utilisateur enregistré avec cet email.",
+                error: true,
+                success: false
+            })
+        }
+
+        const OTP = generateOtp()
+        const expireTime = new Date() + 60 * 60 * 1000
+
+        const update = await User.findByIdAndUpdate(user._id,{
+            $set : {
+                forgot_password_otp: OTP,
+                forgot_password_expiry: new Date(expireTime).toISOString()
+            }
+        })
+
+        await sendEmail({
+            sendTo: email,
+            subject: "Récupération de mot de passe",
+            html: forgotPasswordEmailTemplate({
+                name: user.name,
+                otp: OTP
+            })
+        })
+
+        return res.status(200).json({
+            message: "Veuillez vérifier votre boite mail",
+            error: false,
+            success: true
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (forgotPassword):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+const verifyForgotPasswordOtp = async (req, res) => {
+    const {email, otp} = req.body
+    try {
+
+        if(!email || !otp) {
+            return res.status(400).json({
+                message: "L'email et le code sont obligatoires.",
+                error: true,
+                success: false
+            })
+        }
+
+        const user = await User.findOne({ email })
+
+        if(!user) {
+            return res.status(400).json({
+                message: "Aucun utilisateur enregistré avec cet email.",
+                error: true,
+                success: false
+            })
+        }
+
+        const currenTime = new Date().toISOString()
+
+        if(user.forgot_password_expiry < currenTime) {
+            return res.status(400).json({
+                message: "Ce code a expiré",
+                error: true,
+                success: false
+            })
+        }
+
+        if(otp !== user.forgot_password_otp) {
+            return res.status(400).json({
+                message: "Ce code est invalid.",
+                error: true,
+                success: false
+            })
+        }
+
+        return res.status(200).json({
+            message: "Code otp vérifié avec succès.",
+            error: false,
+            success: true
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (verifyForgotPasswordOtp):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
+const resetPassword = async (req, res) => {
+    const { email, newPassword, confirmPassword } = req.body
+    try {
+        
+        if(!email || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                message: "Tous les champs sont obligatoires.",
+                error: true,
+                success: false
+            })
+        }
+
+        const user = await User.findOne({ email })
+
+        if(!user){
+            return res.status(400).json({
+                message: "Aucun utilisateur enregistré avec cet email.",
+                error: true,
+                success: false
+            })
+        }
+
+        if(newPassword !== confirmPassword){
+            return res.status(400).json({
+                message: "Les deux mots de passe doivent être indentiques.",
+                error: true,
+                success: false
+            })
+        }
+
+        const salt = await bcrypt.genSalt(10)
+        const hashedPassword = await bcrypt.hash(newPassword, salt)
+
+        await User.findByIdAndUpdate(user._id, {
+            $set: { password: hashedPassword }
+        })
+
+        return res.status(200).json({
+            message: "Mot de passe modifié avec succès.",
+            error: false,
+            success: true
+        })
+
+    } catch (error) {
+        console.log("Erreur dans user.controller (resetPassword):", error)
+        return res.status(500).json({
+            message: error.message || error,
+            error: true,
+            success: false
+        })
+    }
+}
+
 module.exports = {
     registerUser,
     verifyEmail,
     login,
     logout,
     uploadAvatar,
-    updateUserDetails
+    updateUserDetails,
+    forgotPassword,
+    verifyForgotPasswordOtp,
+    resetPassword
 }
