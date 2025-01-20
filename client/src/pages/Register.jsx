@@ -1,6 +1,11 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { FaRegEye } from "react-icons/fa";
 import { FaRegEyeSlash } from "react-icons/fa";
+import axiosInstance from "../utils/Axios";
+import SummaryApi from "../common/summaryApi";
+import AxiosToastError from "../utils/AxiosToastError"
+import { Link, useNavigate } from "react-router-dom";
 
 const Register = () => {
     const [data, setData] = useState({
@@ -11,6 +16,7 @@ const Register = () => {
     })
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const navigate = useNavigate()
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -25,13 +31,44 @@ const Register = () => {
 
     const valideValue = Object.values(data).every(el => el)
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
+
+        if(data.password !== data.confirmPassword) {
+            toast.error("Les deux mot de passe sont differents.")
+            return
+        }
+
+        try {
+            const rep = await axiosInstance({
+                ...SummaryApi.register,
+                data: data
+            })
+
+            if(rep.data.error) {
+                toast.error(rep.data.message)
+            }
+
+            if(rep.data.success) {
+                toast.error(rep.data.message)
+                setData({
+                    name: "",
+                    email: "",
+                    password: "",
+                    confirmPassword: ""
+                })
+                navigate("/login")
+            }
+    
+            console.log(rep)
+        } catch (error) {
+            AxiosToastError(error)
+        }
     }
 
     return (
         <div className="h-screen w-screen bg-blue-50 flex items-center justify-center">
-            <div className="bg-white px-10 rounded pt-9">
+            <div className="bg-white px-10 rounded pt-9 pb-5">
                 <p className="text-center font-semibold">Bienvenue sur E.COMM-APP</p>
 
                 <form className="pt-10" onSubmit={handleSubmit}>
@@ -171,6 +208,10 @@ const Register = () => {
                         </button>
                     </div>
                 </form>
+
+                <p>
+                    Vous avez déjà un compte ? <Link to="/login" className="text-blue-500 underline">Se connecter</Link>
+                </p>
             </div>
         </div>
     );
