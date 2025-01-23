@@ -1,22 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { FaRegEye, FaRegEyeSlash } from "react-icons/fa";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import AxiosToastError from "../utils/AxiosToastError";
 import toast from "react-hot-toast";
-import { FaRegEye } from "react-icons/fa";
-import { FaRegEyeSlash } from "react-icons/fa";
-import axiosInstance from "../utils/Axios";
 import SummaryApi from "../common/summaryApi";
-import AxiosToastError from "../utils/AxiosToastError"
-import { Link, useNavigate } from "react-router-dom";
+import axiosInstance from "../utils/Axios";
 
-const Register = () => {
+const ResetPassword = () => {
+    const location = useLocation()
+    const navigate = useNavigate()
     const [data, setData] = useState({
-        name: "",
         email: "",
-        password: "",
+        newPassword: "",
         confirmPassword: ""
     })
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-    const navigate = useNavigate()
+
+    const valideValue = Object.values(data).every(el => el)
+
+
+    useEffect(()=>{
+        if(!(location?.state?.data?.success)){
+            navigate("/")
+        }
+
+        if(location?.state?.email){
+            setData(prev => {
+                return {
+                    ...prev,
+                    email: location?.state?.email
+                }
+            })
+        }
+    },[])
 
     const handleChange = (e) => {
         const { name, value } = e.target
@@ -29,19 +46,17 @@ const Register = () => {
         })
     }
 
-    const valideValue = Object.values(data).every(el => el)
-
     const handleSubmit = async (e) => {
         e.preventDefault()
 
-        if(data.password !== data.confirmPassword) {
+        if(data.newPassword !== data.confirmPassword) {
             toast.error("Les deux mot de passe sont differents.")
             return
         }
 
         try {
             const rep = await axiosInstance({
-                ...SummaryApi.register,
+                ...SummaryApi.resertPassword,
                 data: data
             })
 
@@ -52,9 +67,8 @@ const Register = () => {
             if(rep.data.success) {
                 toast.success(rep.data.message)
                 setData({
-                    name: "",
                     email: "",
-                    password: "",
+                    newPassword: "",
                     confirmPassword: ""
                 })
                 navigate("/login")
@@ -68,63 +82,12 @@ const Register = () => {
     return (
         <div className="h-screen w-screen bg-blue-50 flex items-center justify-center">
             <div className="bg-white px-10 rounded pt-9 pb-5">
-                <p className="text-center font-semibold">Bienvenue sur E.COMM-APP</p>
+                <p className="text-center font-semibold">Réinitialisation du mot de passe</p>
 
                 <form className="pt-10" onSubmit={handleSubmit}>
-                    <div className="lg:flex gap-3">
-                        <div>
-                            <div>
-                                <label>Nom complet <span className="text-red-500">*</span></label>
-                            </div>
-                            <div>
-                                <input 
-                                 type="text"
-                                 autoFocus
-                                 className="
-                                  bg-blue-50
-                                  w-full
-                                  h-9
-                                  p-2
-                                  border
-                                  rounded
-                                  outline-none
-                                  focus:border-primary-200
-                                 "
-                                 name="name"
-                                 value={data.name}
-                                 onChange={handleChange}
-                                 placeholder="Entrez votre nom complet"
-                                />
-                            </div>
-                        </div>
-                        <div className="mt-5 lg:mt-0">
-                            <div>
-                                <label>Email <span className="text-red-500">*</span></label>
-                            </div>
-                            <div>
-                                <input 
-                                 type="email"
-                                 className="
-                                  bg-blue-50
-                                  w-full
-                                  h-9
-                                  p-2
-                                  border
-                                  rounded
-                                  outline-none
-                                  focus:border-primary-200
-                                 "
-                                 name="email"
-                                 value={data.email}
-                                 onChange={handleChange}
-                                 placeholder="Entrez votre mail"
-                                />
-                            </div>
-                        </div>
-                    </div>
                     <div className="mt-5">
                         <div>
-                            <label>Mot de passe <span className="text-red-500">*</span></label>
+                            <label>Nouveau mot de passe <span className="text-red-500">*</span></label>
                         </div>
                         <div className="flex items-center gap-2">
                             <input 
@@ -139,8 +102,8 @@ const Register = () => {
                               outline-none
                               focus:border-primary-200
                              "
-                             name="password"
-                             value={data.password}
+                             name="newPassword"
+                             value={data.newPassword}
                              onChange={handleChange}
                              placeholder="Entrez votre mot de passe"
                             />
@@ -158,7 +121,7 @@ const Register = () => {
                     </div>
                     <div className="mt-5">
                         <div>
-                            <label>Confirmez mot de passe <span className="text-red-500">*</span></label>
+                            <label>Confirmez le mot de passe <span className="text-red-500">*</span></label>
                         </div>
                         <div className="flex items-center gap-2">
                             <input 
@@ -203,7 +166,7 @@ const Register = () => {
                           text-white 
                           font-semibold
                         `}>
-                            {"S'inscrire"}
+                            Confirmer
                         </button>
                     </div>
                 </form>
@@ -216,4 +179,4 @@ const Register = () => {
     );
 }
 
-export default Register;
+export default ResetPassword;
